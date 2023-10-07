@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GUI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1 id="title">操作するやつ</h1>
+        <div class="row">
+            <div class="col-5 container">
+                <canvas id="js_canvas" width="500" height="500"></canvas>
+            </div>
+            <div class="col">
+                <div class="row" style="height: 50em;">
+                <div class="col container">
+                    <div class="inputMenu row">
+                        <div class="inputToken col">
+                            <input type="text" name="procon-token" id="token_input" placeholder="tokenを入力" class="form-control d-inline">
+                            <button type="button" id="get_match_list_button" class="btn btn-primary">試合一覧取得</button>
+                        </div>
+                        <div class="selectMatchID col">
+                            <select name="" id="match_selector" class="form-control">
+                                <option value="">no matches found</option>
+                            </select>
+                            <button type="button" id="get_match_info_button" class="btn btn-primary">試合状況取得</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion col container overflow-y-auto" id="log_parent" style="height: 50%;">
+                </div>
+            </div>
+            <div class="row"></div>
+            </div>
+        </div>
+        
+    </div>
+    <div id="debugger_area"></div>
+    
+    <script src="/static/script.js"></script>
+</body>
+</html>
