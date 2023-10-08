@@ -262,6 +262,7 @@ document.querySelector("#get_match_list_button").addEventListener("click", funct
           'opponent': data.matches[i].opponent
       });
       selectHTML += `<option value="${match_list[i].id}">id: ${match_list[i].id}, 相手チーム: ${match_list[i].opponent}</option>`;
+      logger.innerHTML = '';
     }
     match_selector.innerHTML = selectHTML;
   }).fail((err) => {
