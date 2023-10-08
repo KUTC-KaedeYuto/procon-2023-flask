@@ -1,6 +1,8 @@
 import threading
 import time
-from typing import Tuple, List
+from typing import *
+from aster import *
+from copy import copy
 
 def processBoard(board):
     result_board = list()
@@ -24,18 +26,12 @@ def processBoard(board):
             if mason > 0:
                 result_masons["ally"].append({
                     'id': mason,
-                    'location':{
-                        'x': j,
-                        'y': i
-                    }
+                    'location': Vec2D(j, i)
                 })
             elif mason < 0:
                 result_masons["opponent"].append({
                     'id': mason,
-                    'location':{
-                        'x': j,
-                        'y': i
-                    }
+                    'location': Vec2D(j, i)
                 })
     f = lambda l : abs(l['id'])
     result_masons['ally'] = sorted(result_masons['ally'], key=f)
@@ -43,8 +39,7 @@ def processBoard(board):
     
     return result_board, result_masons
 
-#経路計算アルゴリズムとつなげる何かが必要
-#importして使ってもいいしここにコピペするか新しくクラス作るのもあり
+Mason_Alias: TypeAlias = 'Mason'
 
 class Action:
     def __init__(self, type: str, direction: int) -> None:
@@ -53,16 +48,45 @@ class Action:
     
     def get(self) -> Tuple[str, int]:
         return self.type, self.direction
+    
+    def toPostData(self) -> dict:
+        return {
+            'type': self.toAction(self.type),
+            'dir' : self.direction
+        }
+    
+    def toDict(self) -> dict:
+        return {
+            'type': self.type,
+            'dir': self.direction
+        }
+    
+    def __str__(self) -> str:
+        return f'{{type:{self.type}, dir: {str(direction_to_vector(self.direction))}}}'
+
+    @staticmethod
+    def toAction(type: str):
+        try:
+            return ['wait', 'move', 'build', 'destroy'].index(type)
+        except ValueError:
+            return 0
 
 class ActionType:
-    def __init__(self, mason) -> None:
-        self.mason = mason
-        self.board = None
-        self.__done = False
+    def __init__(self, mason: Mason_Alias) -> None:
+        self.mason: Mason = mason
+        self.__done: bool = False
+        self.initialized: bool = False
     
-    def next(self) -> Action:
-        self.__done = True
+    def actionInit(self) -> bool:
+        self.initialized = True
+        return True
+    
+    def next(self) -> Union[Action, None]:
+        self.finish()
         return None
+    
+    def finish(self) -> None:
+        self.__done = True
     
     def availableNext(self) -> bool:
         return self.__done
@@ -70,93 +94,188 @@ class ActionType:
     def isDone(self) -> bool:
         return self.__done
     
-    def updateBoard(self, board) -> None:
+    def updateInfo(self, board) -> None:
         self.board = board
+    
+    def toDict(self) -> dict:
+        return {
+            'type': self.__class__.__name__,
+            'mason': self.mason.id,
+            'initialied': self.initialized,
+            'done': self.__done
+        }
 
 
 class WaitAction(ActionType):
-    def __init__(self, turns: int) -> None:
-        super().__init__()
+    def __init__(self, mason, turns: int) -> None:
+        super().__init__(mason)
         self.turns: int = turns
         self.progress: int = 0
     
-    def next(self) -> Action:
+    def next(self) -> Union[Action, None]:
         self.progress += 1
         if self.progress == self.turns:
-            super(WaitAction, self).next()
+            super().next()
         
         if self.progress > self.turns:
             return None
         return Action('wait', 0)
     
+    def toDict(self) -> dict:
+        result = super().toDict()
+        result['turns'] = self.turns
+        result['progress'] = self.progress
+        return result
+
+
 class MoveAction(ActionType):
-    def __init__(self, dist_x: int, dist_y: int) -> None:
-        super().__init__()
-        self.dist = {
-            'x': dist_x,
-            'y': dist_y
-        }
+    def __init__(self, mason: Mason_Alias, dist_x: int, dist_y: int) -> None:
+        super().__init__(mason)
+        self.dist: Vec2D = Vec2D(dist_x, dist_y)
         self.actions: List[Action] = []
-        #職人のインスタンス受け取り
+        self.index = -1
     
-    def isDone(self) -> bool:
-        #行動が完了したか検知(職人の現在地 == 目的地)
-        pass
+    def actionInit(self) -> bool:
+        goal_node = aster(self.board, self.mason.location, self.dist)
+        if goal_node == None:
+            return False
+        current_node = goal_node
+        trace: List[Action] = []
+
+        while current_node.location != self.mason.location:
+            v: Vec2D = current_node.move_vector
+            trace.append(Action('move', vector_to_direction(v)))
+            current_node = current_node.parent
+        trace.reverse()
+        print(list(map(str, trace)))
+        self.actions = trace
+        self.index = 0
+        super().actionInit()
+        return True
+
+    def __getNextPos(self) -> Vec2D:
+        next_vec: Vec2D = direction_to_vector(self.actions[self.index].direction)
+        new_pos: Vec2D = copy(self.mason.location)
+        new_pos.x += next_vec.x
+        new_pos.y += next_vec.y
+        return new_pos
+        
     
     def availableNext(self) -> bool:
-        #self.boardを参照して次の行動が有効かどうか判定
-        pass
+        if super().isDone():
+            return False
+        new_pos = self.__getNextPos()
+        cell = self.board['fixed_board'][new_pos.y][new_pos.x]
+        if cell["structure"] == 1:
+            return False
+        if cell["mason"] != 0:
+            return False
+        
+        if cell["wall"] == 2:
+            return False
+        return True
 
-    def next(self) -> Action:
-        #次の移動が有効かどうかを検証して有効なら移動アクションを返す
-        #無効なら再計算
-        pass
+    def next(self) -> Union[Action, None]:
+        if not self.availableNext():
+            new_pos = self.__getNextPos()
+            if self.board['fixed_board'][new_pos.y][new_pos.x]['wall'] == 2:
+                return Action('destroy', self.actions[self.index].direction)
+            
+            if self.actionInit():
+                return self.next()
+            else:
+                super().finish()
+                return None
+        action = self.actions[self.index]
+        self.index += 1
+        if self.index >= len(self.actions):
+            super().finish()
+        return action
+    
+    def toDict(self) -> dict:
+        result = super().toDict()
+        result['dist'] = self.dist
+        result['actions'] = [a.toDict() for a in self.actions]
+        result['index'] = self.index
+        return result
 
 #設置と破壊クラスも作る
 
 class Mason:
     def __init__(self, id) -> None:
         self.id = id
-        self.actions = []
+        self.actions: List[ActionType] = []
+        self.action_index: int = 0
         self.board = None
 
-    def updateBoard(self, board):
+    def updateInfo(self, board) -> None:
         self.board = board
         for m in board['masons']['ally']:
             if m['id'] == self.id:
-                self.location = m['location']
+                self.location: Vec2D = m['location']
+        for action in self.actions:
+            action.updateInfo(board)
     
-    def nextAction(self):
-        #self.actionsからActionTypeを取り出してnextを呼び出す
-        #ActionTypeのisDoneがTrueなら次のActionTypeに切り替える
-        pass
+    def nextAction(self) -> Union[Action, None]:
+        if self.action_index >= len(self.actions):
+            return None
+        
+        current_action_type = self.actions[self.action_index]
+        if current_action_type.isDone():
+            self.action_index += 1
+            return self.nextAction()
+        if not current_action_type.initialized:
+            res = current_action_type.actionInit()
+            if not res:
+                self.action_index += 1
+                return self.nextAction()
+        return current_action_type.next()
     
-    def allocateAction(self, type, data):
-        #typeとdataからアクション生成してself.actionsにappendする
-        pass
+    def allocateAction(self, type: str, data: dict) -> bool:
+        if type == 'move':
+            new_action = MoveAction(self, data['x'], data['y'])
+            self.actions.append(new_action)
+            return True
+        
+        return False
+    
+    def toDict(self) -> dict:
+        return {
+            'id': self.id,
+            'actions': [action.toDict() for action in self.actions],
+            'action_index': self.action_index,
+            'location': self.location
+        }
 
 
 class GameController(threading.Thread):
 
-    def __init__(self, match_list, token, get_method) -> None:
+    def __init__(self, match_list: dict, token: str, get_method: Callable, post_method: Callable) -> None:
         super(GameController, self).__init__()
-        self.match_list = match_list
-        self.token = token
-        self.get = get_method
-        self.initialized = False
-        self.__locking_board = False
+        self.match_list: dict = match_list
+        self.token: str = token
+        self.get: Callable = get_method
+        self.post: Callable = post_method
+        self.initialized: bool = False
+        self.__match_info: Union[dict, None] = None
+        self.__locking_info: bool = False
+        self.posted_turn: int = -1
+        self.accepted_actions: list = []
+        self.__break_flag: bool = False
 
-    def selectMatch(self, match_id):
-        self.match_id = match_id
+    def selectMatch(self, match_id: int) -> None:
+        self.match_id: int = match_id
         for m in self.match_list['matches']:
             print(m)
             if m['id'] == match_id:
-                self.turns = m['turns']
-                self.turnSeconds = m['turnSeconds']
-                self.opponent = m['opponent']
-                self.first = m['first']
-                self.bonus = m['bonus']
-                self.board_info = {
+                self.turns: int = m['turns']
+                self.turnSeconds: int = m['turnSeconds']
+                self.opponent: str = m['opponent']
+                self.first: bool = m['first']
+                if not self.first:
+                    self.posted_turn = 0
+                self.bonus: dict = m['bonus']
+                self.board_info: dict = {
                     'height': m['board']['height'],
                     'width': m['board']['width'],
                     'mason' : m['board']['mason'],
@@ -164,34 +283,99 @@ class GameController(threading.Thread):
                 self.mason_list: List[Mason] = []
                 for i in range(self.board_info['mason']):
                     self.mason_list.append(Mason(i + 1))
-                self.updateBoard()
+                self.updateInfo()
                 self.initialized = True
+                return
 
 
-    def run(self):
-        while self.initialized:
-            if not self.__board:
+    def run(self) -> None:
+        while self.initialized and not self.__break_flag:
+            self.updateInfo()
+            if not self.__match_info:
                 continue
-            if False:#ターン更新の検知
+            current_turn = self.__match_info['turn'] + 1
+            if (current_turn %2 == 1) == self.first and self.posted_turn < current_turn:
                 turn_actions = []
                 for mason in self.mason_list:
-                    turn_actions.append(mason.nextAction())
-                #行動計画更新のPOST
-            time.sleep(1)
+                    action = mason.nextAction()
+                    if action:
+                        turn_actions.append(action.toPostData())
+                    else:
+                        turn_actions.append(Action('wait', 0).toPostData())
+                post_data = {
+                    'turn': self.posted_turn + 2,
+                    'actions': turn_actions
+                }
+                res = self.post(f'matches/{self.match_id}', self.token, {'Content-Type': 'application/json'}, json.dumps(post_data))
+                if res.status_code == 200:
+                    self.posted_turn += 2
+                    self.accepted_actions.append({
+                        'data': post_data,
+                        'accepted_at': res.json()['accepted_at']
+                    })
+            elif current_turn - self.posted_turn >= 2:
+                self.posted_turn = current_turn - 1
+            time.sleep(0.5)
     
-    def updateBoard(self):
-        res = self.get(f'matches/{self.match_id}', self.token).json()
+    def updateInfo(self) -> None:
+        res = self.get(f'matches/{self.match_id}', self.token)
+        if res.status_code != 200:
+            return
+        res = res.json()
         b, m = processBoard(res['board'])
-        board = res
-        board['fixed_board'] = b
-        board['masons'] = m
-        while self.__locking_board:
+        info = res
+        info['fixed_board'] = b
+        info['masons'] = m
+        while self.__locking_info:
             pass
-        self.__locking_board = True
-        self.__board = board
-        self.__locking_board = False
+        self.__locking_info = True
+        self.__match_info = info
+        self.__locking_info = False
         for mason in self.mason_list:
-            mason.updateBoard(self.getBoard())
+            mason.updateInfo(self.getInfo())
+            
 
-    def getBoard(self):
-        return self.__board
+    def getInfo(self) -> Union[dict, None]:
+        return self.__match_info
+
+    
+    def allocate(self, data: dict) -> bool:
+        try:
+            mason_id = data['mason_id']
+            action_type = data['action_type']
+            action_data = data['action_data']
+            return self.mason_list[mason_id - 1].allocateAction(action_type, action_data)
+        except KeyError:
+            return False
+        except IndexError:
+            return False
+        
+    def exit(self) -> None:
+        self.__break_flag = True
+
+    def toDict(self) -> dict:
+        result = {
+            'match_list': self.match_list,
+            'token': self.token,
+            'initialized': self.initialized,
+            'match_info': self.__match_info,
+            'loking_info': self.__locking_info,
+            'posted_turn': self.posted_turn,
+            'accepted_actions': self.accepted_actions,
+            'break_flag': self.__break_flag
+        }
+        try:
+            result['match_id'] = self.match_id
+            result['turns'] = self.turns
+            result['turnSeconds'] = self.turnSeconds
+            result['opponent'] = self.opponent
+            result['first'] = self.first
+            result['bonus'] = self.bonus
+            result['board_info'] = self.board_info
+            result['mason_list'] = [m.toDict() for m in self.mason_list]
+            result['loking_info'] = self.__locking_info
+            result['match_info'] = self.__match_info
+
+        except AttributeError:
+            pass
+        return result

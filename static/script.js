@@ -5,6 +5,7 @@ const ctx = canvas.getContext('2d');
 const match_selector = document.querySelector("#match_selector");
 const logger = document.querySelector("#log_parent");
 const debugger_div = document.querySelector("#debugger_area");
+const response_viewer = document.querySelector('#response_viewer');
 const action_type = ['待機', '移動', '建築', '破壊'];
 const action_dir = ['無向','左上', '上', '右上', '右', '右下', '下', '左下', '左'];
 
@@ -241,6 +242,7 @@ function getLogElement(log_line){
 
 document.querySelector("#get_match_list_button").addEventListener("click", function(){
   token = document.querySelector("#token_input").value;
+  if(interval_id != -1) clearInterval(interval_id);
   $.ajax({
     type: 'get',
     url: '/matches',
@@ -277,7 +279,7 @@ function update_board(){
       'match_id': connectId
     }
   }).done((data, status, xhr) => {
-    
+    if(data == "Too early") return;
     let res_json = data;
     update_map_data(res_json);
     updateLog(res_json['logs']);
@@ -286,6 +288,13 @@ function update_board(){
     console.log(err.status_code);
     clearInterval(interval_id);
   });
+  $.ajax({
+    type: 'get',
+    url: '/controller'
+  }).done((data) => {
+    console.log(data);
+    response_viewer.innerHTML = `<pre>${JSON.stringify(data.mason_list, null, 2)}</pre>`;
+  })
 }
 
 document.querySelector("#get_match_info_button").addEventListener("click", function(){
