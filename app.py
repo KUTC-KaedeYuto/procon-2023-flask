@@ -71,62 +71,79 @@ def getControllerInfo():
 
 @app.route("/test")
 def test_method():
-    controller.allocate({
-        'mason_id': 1,
-        'action_type': 'move',
-        'action_data': {
-            'x': 0,
-            'y': 5
-        }
-    })
-    controller.allocate({
-        'mason_id': 1,
-        'action_type': 'move',
-        'action_data': {
-            'x': 1,
-            'y': 1
-        }
-    })
-    controller.allocate({
-        'mason_id': 1,
-        'action_type': 'move',
-        'action_data': {
-            'x': 5,
-            'y': 9
-        }
-    })
-    controller.allocate({
-        'mason_id': 1,
-        'action_type': 'move',
-        'action_data': {
-            'x': 5,
-            'y': 1
-        }
-    })
-    controller.allocate({
-        'mason_id': 2,
-        'action_type': 'move',
-        'action_data': {
-            'x': 10,
-            'y': 5
-        }
-    })
-    controller.allocate({
-        'mason_id': 2,
-        'action_type': 'move',
-        'action_data': {
-            'x': 5,
-            'y': 1
-        }
-    })
-    controller.allocate({
-        'mason_id': 2,
-        'action_type': 'move',
-        'action_data': {
-            'x': 5,
-            'y': 9
-        }
-    })
+    for i in range(4, 7):
+        controller.allocate({
+            'mason_id': 1,
+            'action_type': 'build',
+            'action_data': {
+                'x': i,
+                'y': 3
+            }
+        })
+        controller.allocate({
+            'mason_id': 2,
+            'action_type': 'build',
+            'action_data': {
+                'x': i,
+                'y': 7
+            }
+        })
+    for i in range(4, 7):
+        controller.allocate({
+            'mason_id': 1,
+            'action_type': 'build',
+            'action_data': {
+                'x': 7,
+                'y': i
+            }
+        })
+        controller.allocate({
+            'mason_id': 2,
+            'action_type': 'build',
+            'action_data': {
+                'x': 3,
+                'y': i
+            }
+        })
+
+    return "success"
+
+@app.route("/test1")
+def test_method1():
+    for i in range(4, 7):
+        controller.allocate({
+            'mason_id': 1,
+            'action_type': 'destroy',
+            'action_data': {
+                'x': i,
+                'y': 3
+            }
+        })
+        controller.allocate({
+            'mason_id': 2,
+            'action_type': 'destroy',
+            'action_data': {
+                'x': i,
+                'y': 7
+            }
+        })
+    for i in range(4, 7):
+        controller.allocate({
+            'mason_id': 1,
+            'action_type': 'destroy',
+            'action_data': {
+                'x': 7,
+                'y': i
+            }
+        })
+        controller.allocate({
+            'mason_id': 2,
+            'action_type': 'destroy',
+            'action_data': {
+                'x': 3,
+                'y': i
+            }
+        })
 
     return "success"
 

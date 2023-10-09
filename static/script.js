@@ -86,10 +86,10 @@ const sprite = {
           let r = field[y][x];
           // チーム属性
           if (r.territory != 0) {
-            let colors = ["#ccc", "#fcc", "#cfc", "#ccf"];
+            let colors = ["#ccc", "#fcc", "#cfc", "#ffc"];
             this.#ctx.save();
             this.#ctx.beginPath();
-            this.#ctx.fillStyle = colors[r.territories];
+            this.#ctx.fillStyle = colors[r.territory];
             this.#ctx.rect(
               x * this.#cellSize + 1, y * this.#cellSize + 1,
               this.#cellSize - 2, this.#cellSize - 2
@@ -98,7 +98,7 @@ const sprite = {
             this.#ctx.restore();
           }
           // 属性 (中立、陣地、城壁)
-          if (r.wall == 2) {
+          if (r.wall != 0) {
             this.#ctx.save();
             this.#ctx.drawImage(
               sprite.wall,

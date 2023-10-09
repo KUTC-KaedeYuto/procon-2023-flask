@@ -1,8 +1,11 @@
 import threading
 import time
 from typing import *
+from typing import Union
 from aster import *
 from copy import copy
+
+from aster import Union
 
 def processBoard(board):
     result_board = list()
@@ -199,6 +202,121 @@ class MoveAction(ActionBase):
         result['index'] = self.index
         return result
 
+class ConstructionActionBase(ActionBase):
+    def __init__(self, mason: Mason_Alias, dist_x: int, dist_y: int) -> None:
+        super().__init__(mason)
+        self.dist: Vec2D = Vec2D(dist_x, dist_y)
+        self.actions: List[Action] = []
+        self.index = -1
+
+    def actionInit(self) -> bool:
+        goal_node = surrounding_aster(self.board, self.mason.location, self.dist)
+        if goal_node == None:
+            return False
+        current_node = goal_node
+        trace: List[Action] = []
+        dist_dir = Vec2D(self.dist.x - goal_node.location.x, self.dist.y - goal_node.location.y)
+        trace.append(Action('dummy', vector_to_direction(dist_dir)))
+
+        while current_node.location != self.mason.location:
+            v: Vec2D = current_node.move_vector
+            trace.append(Action('move', vector_to_direction(v)))
+            current_node = current_node.parent
+        trace.reverse()
+        print(list(map(str, trace)))
+        self.actions = trace
+        self.index = 0
+        super().actionInit()
+        return True
+    
+    def __getNextPos(self) -> Vec2D:
+        next_vec: Vec2D = direction_to_vector(self.actions[self.index].direction)
+        new_pos: Vec2D = copy(self.mason.location)
+        new_pos.x += next_vec.x
+        new_pos.y += next_vec.y
+        return new_pos
+    
+    def availableNext(self) -> bool:
+        if super().isDone():
+            return False
+        new_pos = self.__getNextPos()
+        cell = self.board['fixed_board'][new_pos.y][new_pos.x]
+        next_action = self.actions[self.index]
+        if next_action.type == 'move':
+            if cell["structure"] == 1:
+                return False #池
+            if cell["mason"] != 0:
+                return False #職人がいる
+            if cell["wall"] == 2:
+                return False #相手の城壁
+            
+        elif next_action.type == 'build':
+            if cell["structure"] == 2:
+                return False #城
+            if cell["mason"] < 0:
+                return False #相手の職人がいる
+            if cell["wall"] == 2:
+                return False #相手の城壁
+
+        return True
+    
+    def next(self) -> Union[Action, None]:
+        action = self.actions[self.index]
+        if not self.availableNext():
+            new_pos = self.__getNextPos()
+            if self.board['fixed_board'][new_pos.y][new_pos.x]['wall'] == 2:
+                return Action('destroy', self.actions[self.index].direction)
+            if  action.type == 'move':
+                if self.actionInit():
+                    return self.next()
+                else:
+                    super().finish()
+                    return None
+
+        action = self.actions[self.index]
+        self.index += 1
+        if self.index >= len(self.actions):
+            super().finish()
+        return action
+    
+    def toDict(self) -> dict:
+        result = super().toDict()
+        result['dist'] = self.dist
+        result['actions'] = [a.toDict() for a in self.actions]
+        result['index'] = self.index
+        return result
+
+class BuildAction(ConstructionActionBase):
+    def __init__(self, mason: Mason_Alias, dist_x: int, dist_y: int) -> None:
+        super().__init__(mason, dist_x, dist_y)
+
+    def actionInit(self) -> bool:
+        res = super().actionInit()
+        self.actions[-1].type = 'build'
+        return res
+    
+    def availableNext(self) -> bool:
+        return super().availableNext()
+    
+    def next(self) -> Action | None:
+        return super().next()
+    
+class DestroyAction(ConstructionActionBase):
+    def __init__(self, mason: Mason_Alias, dist_x: int, dist_y: int) -> None:
+        super().__init__(mason, dist_x, dist_y)
+
+    def actionInit(self) -> bool:
+        res = super().actionInit()
+        self.actions[-1].type = 'destroy'
+        return res
+    
+    def availableNext(self) -> bool:
+        return super().availableNext()
+    
+    def next(self) -> Action | None:
+        return super().next()
+    
+
 
 class Mason:
     def __init__(self, id) -> None:
@@ -231,8 +349,19 @@ class Mason:
         return current_action_type.next()
     
     def allocateAction(self, type: str, data: dict) -> bool:
+        new_action: Union[None, MoveAction, BuildAction, DestroyAction, WaitAction] = None
         if type == 'move':
             new_action = MoveAction(self, data['x'], data['y'])
+            self.actions.append(new_action)
+            return True
+        
+        elif type == 'build':
+            new_action = BuildAction(self, data['x'], data['y'])
+            self.actions.append(new_action)
+            return True
+        
+        elif type == 'destroy':
+            new_action = DestroyAction(self, data['x'], data['y'])
             self.actions.append(new_action)
             return True
         

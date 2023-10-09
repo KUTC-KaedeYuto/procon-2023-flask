@@ -50,7 +50,6 @@ def aster(field, start: Vec2D, goal: Vec2D):
 
 def surrounding_aster(field, start: Vec2D, goal: Vec2D):
     goals = [
-        goal,
         Vec2D(goal.x - 1, goal.y),
         Vec2D(goal.x + 1, goal.y),
         Vec2D(goal.x, goal.y - 1),
