@@ -71,7 +71,7 @@ class Action:
         except ValueError:
             return 0
 
-class ActionType:
+class ActionBase:
     def __init__(self, mason: Mason_Alias) -> None:
         self.mason: Mason = mason
         self.__done: bool = False
@@ -106,7 +106,7 @@ class ActionType:
         }
 
 
-class WaitAction(ActionType):
+class WaitAction(ActionBase):
     def __init__(self, mason, turns: int) -> None:
         super().__init__(mason)
         self.turns: int = turns
@@ -128,7 +128,7 @@ class WaitAction(ActionType):
         return result
 
 
-class MoveAction(ActionType):
+class MoveAction(ActionBase):
     def __init__(self, mason: Mason_Alias, dist_x: int, dist_y: int) -> None:
         super().__init__(mason)
         self.dist: Vec2D = Vec2D(dist_x, dist_y)
@@ -199,12 +199,11 @@ class MoveAction(ActionType):
         result['index'] = self.index
         return result
 
-#設置と破壊クラスも作る
 
 class Mason:
     def __init__(self, id) -> None:
         self.id = id
-        self.actions: List[ActionType] = []
+        self.actions: List[ActionBase] = []
         self.action_index: int = 0
         self.board = None
 
