@@ -348,24 +348,26 @@ class Mason:
                 return self.nextAction()
         return current_action_type.next()
     
-    def allocateAction(self, type: str, data: dict) -> bool:
-        new_action: Union[None, MoveAction, BuildAction, DestroyAction, WaitAction] = None
+    def getAction(self, type, data) -> Union[None, MoveAction, BuildAction, DestroyAction, WaitAction]:
         if type == 'move':
-            new_action = MoveAction(self, data['x'], data['y'])
-            self.actions.append(new_action)
-            return True
+            return MoveAction(self, data['x'], data['y'])
         
         elif type == 'build':
-            new_action = BuildAction(self, data['x'], data['y'])
-            self.actions.append(new_action)
-            return True
+            return BuildAction(self, data['x'], data['y'])
         
         elif type == 'destroy':
-            new_action = DestroyAction(self, data['x'], data['y'])
-            self.actions.append(new_action)
-            return True
+            return DestroyAction(self, data['x'], data['y'])
         
-        return False
+        elif type == 'wait':
+            return WaitAction(self, data['turns'])
+
+        return None
+    
+    def allocateAction(self, type: str, data: dict) -> bool:
+        action = self.getAction(type, data)
+        if action:
+            self.actions.append(action)
+        return action != None
     
     def toDict(self) -> dict:
         return {
@@ -474,6 +476,47 @@ class GameController(threading.Thread):
             action_type = data['action_type']
             action_data = data['action_data']
             return self.mason_list[mason_id - 1].allocateAction(action_type, action_data)
+        except KeyError:
+            print('[allocate] Invalid data')
+            return False
+        except IndexError:
+            print('[allocate] Invalid mason id')
+            return False
+        
+    def change(self, data: dict) -> bool:
+        try:
+            mason_id = data['mason_id']
+            method = data['method']
+            option = data['option']
+            mason = self.mason_list[mason_id - 1]
+            if method == 'delete':
+                index = option['index']
+                if index == mason.action_index:
+                    mason.action_index += 1
+                    return True
+                if mason.action_index < index and index < len(mason.actions):
+                    del mason.actions[index]
+                    return True
+            
+            elif method == 'swap':
+                a = option['index'][0]
+                b = option['index'][1]
+                if mason.action_index < a and a < len(mason.actions) and mason.action_index < b and b < len(mason.actions):
+                    temp = mason.actions[a]
+                    mason.actions[a] = mason.actions[b]
+                    mason.actions[b] = temp
+                    return True
+                
+            elif method == 'change':
+                index = option['index']
+                new_type = option['type']
+                new_data = option['data']
+                new_action = mason.getAction(new_type, new_data)
+                if new_action and mason.action_index < index and index < len(mason.actions):
+                    mason.actions[index] = new_action
+
+            
+            return False
         except KeyError:
             print('[allocate] Invalid data')
             return False

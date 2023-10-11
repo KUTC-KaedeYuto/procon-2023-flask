@@ -71,6 +71,17 @@ def getControllerInfo():
         return jsonify(controller.toDict())
     return "GameController is not instantiated.", 500
 
+@app.route("/change", methods=["POST"])
+def change_action():
+    if controller and controller.initialized:
+        data = request.json
+        print(data)
+        res = controller.change(data)
+        if res:
+            return "success", 200
+        return "Because of incorrect data, server failed to allocate action to the mason.", 400
+    return "GameController is not ready.\n Please try again or send another request", 500
+
 @app.route("/test")
 def test_method():
     for i in range(4, 7):

@@ -11,6 +11,13 @@ const allocate_button = document.querySelector("#allocate_button");
 const mason_action_selector = document.querySelector("#mason_action_selector");
 const dist_x = document.querySelector("#dist_x");
 const dist_y = document.querySelector("#dist_y");
+const mason_action_list = document.querySelector("#mason_action_list");
+const delete_collapse = document.querySelector("#delete_collapse");
+const edit_collapse = document.querySelector("#edit_collapse");
+const delete_action_button = document.querySelector("#delete_action_button");
+const edit_action_button = document.querySelector("#edit_action_button");
+const swap_up_action_button = document.querySelector("#swap_up_action_button");
+const swap_down_action_button = document.querySelector("#swap_down_action_button");
 const action_type = ['待機', '移動', '建築', '破壊'];
 const action_dir = ['無向','左上', '上', '右上', '右', '右下', '下', '左下', '左'];
 
@@ -20,6 +27,7 @@ let interval_id = -1;
 let match_list = [];
 let shown_log_id = [];
 let controller;
+let last_clicked_action_element = null;
 
 // 画像読み込み
 const sprite = {
@@ -247,6 +255,7 @@ function getLogElement(log_line){
 }
 
 function updateMason(){
+  console.log(controller.mason_list);
   mason_list = controller.mason_list;
   console.log(mason_list);
   result = '';
@@ -259,9 +268,46 @@ function updateMason(){
 
 
 function showActions(mason){
+  console.log(mason);
+  const action_map = {
+    'WaitAction': '待機',
+    'MoveAction': '移動',
+    'BuildAction': '建築',
+    'DestroyAction': '破壊'
+  };
   let result = '';
-  result = JSON.stringify(mason.actions, null, 2);
-  document.querySelector("#mason_action_list").innerHTML = result;
+  for(let i = mason.action_index; i < mason.actions.length; i++){
+    let action = mason.actions[i];
+    let item =
+`<li class="list-group-item${i == mason.action_index ? " active" : ""}"  data-action_id=${i}>
+    行動:${action_map[action.type]}, 目的地:(${action.dist.x},${action.dist.y})
+</li>`;
+    result += item;
+  }
+  mason_action_list.innerHTML = result;
+  for(let child of mason_action_list.children) {
+    console.log(child);
+    child.addEventListener("click", function(){onClickAction(this);});
+  }
+}
+
+function onClickAction(element){
+  if(last_clicked_action_element != null) last_clicked_action_element.classList.remove("list-group-item-info");
+  if(element === last_clicked_action_element){
+    edit_collapse.classList.add("d-none");
+    delete_collapse.classList.add("d-none");
+    last_clicked_action_element = null;
+  }else {
+    delete_collapse.classList.remove("d-none");
+    if(element === mason_action_list.children[0]){
+      edit_collapse.classList.add("d-none");
+    }else{
+      element.classList.add("list-group-item-info");
+      edit_collapse.classList.remove("d-none");
+    }
+    last_clicked_action_element = element;
+  }
+  
 }
 
 document.querySelector("#get_match_list_button").addEventListener("click", function(){
@@ -335,7 +381,7 @@ document.querySelector("#update_mason_button").addEventListener("click", updateM
 document.querySelector("#select_mason_button").addEventListener("click", function(){
   document.querySelector("#mason_controller").classList.remove("d-none");
   let value = +mason_selector.value;
-  showActions(controller.mason_list[value]);
+  showActions(controller.mason_list[value - 1]);
 });
 
 allocate_button.addEventListener("click", function(){
@@ -356,9 +402,30 @@ allocate_button.addEventListener("click", function(){
     })
   }).done((data, status, xhr) => {
     allocate_button.disabled = false;
+    document.querySelector("#mason_action_editor").classList.remove("d-none");
     console.log(data);
   }).fail((err) => {
     allocate_button.disabled = false;
+  });
+});
+
+delete_action_button.addEventListener("click", function(){
+  data = {
+    mason_id: +mason_selector.value,
+    method: 'delete',
+    option: {
+      index: +last_clicked_action_element.dataset.action_id
+    }
+  };
+  $.ajax({
+    type: 'POST',
+    url: '/change',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    data: JSON.stringify(data)
+  }).done((data, status, xhr) => {
+    console.log(data);
   });
 });
 
@@ -377,4 +444,4 @@ canvas.addEventListener("click", (e) => {
     console.log(`cliked:${clickedRow},${clickedCol}`);
     dist_x.value = clickedCol;
     dist_y.value = clickedRow;
-})
+});
