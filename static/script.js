@@ -304,6 +304,11 @@ document.querySelector("#get_match_info_button").addEventListener("click", funct
   interval_id = setInterval(update_board, 1000);
 });
 
+
+document.querySelector("#test_button")?.addEventListener("click", () => {
+  fetch("/test");
+});
+
 canvas.addEventListener("click", (e) => {
     const rect = canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
