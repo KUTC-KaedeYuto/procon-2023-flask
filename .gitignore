@@ -153,4 +153,6 @@ cython_debug/
 
 
 #user
+static/bootstrap-5.0.2-dist/
+static/jquery/
 test.py

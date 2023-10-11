@@ -4,6 +4,8 @@
 - flask
 - requests
 - mypy
+- [Bootstrap 5.0.2](https://github.com/twbs/bootstrap/releases/download/v5.0.2/bootstrap-5.0.2-dist.zip)
+- [JQuery](https://code.jquery.com/jquery-3.7.1.min.js)
 
 ## 使い方
 1. app.pyを実行
