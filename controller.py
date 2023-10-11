@@ -434,6 +434,7 @@ class GameController(threading.Thread):
                     'turn': self.posted_turn + 2,
                     'actions': turn_actions
                 }
+                print(post_data)
                 res = self.post(f'matches/{self.match_id}', self.token, {'Content-Type': 'application/json'}, json.dumps(post_data))
                 if res.status_code == 200:
                     self.posted_turn += 2
@@ -474,8 +475,10 @@ class GameController(threading.Thread):
             action_data = data['action_data']
             return self.mason_list[mason_id - 1].allocateAction(action_type, action_data)
         except KeyError:
+            print('[allocate] Invalid data')
             return False
         except IndexError:
+            print('[allocate] Invalid mason id')
             return False
         
     def exit(self) -> None:

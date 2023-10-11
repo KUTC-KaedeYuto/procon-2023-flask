@@ -24,7 +24,7 @@ class OriginalJSONEncoder(json.JSONEncoder):
 
 class OriginalJSONProvider(JSONProvider):
     def loads(self, s: str | bytes, **kwargs: Any) -> Any:
-        return super().loads(s, **kwargs)
+        return json.loads(s, **kwargs)
 
     def dumps(self, obj: Any, **kwargs: Any) -> str:
         return json.dumps(obj, cls=OriginalJSONEncoder, **kwargs)

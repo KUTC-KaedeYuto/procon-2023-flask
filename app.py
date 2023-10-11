@@ -20,6 +20,7 @@ def get(url: str, token: str):
 def post(url: str, token: str, header: dict, body):
     header['procon-token'] = token
     res = requests.post(home_url + url, headers=header, data=body)
+    print(res.status_code)
     return res
 
 @app.route("/")
@@ -56,7 +57,8 @@ def get_match_info():
 @app.route("/allocate", methods=["POST"])
 def allocate_action():
     if controller and controller.initialized:
-        data = request.json()
+        data = request.json
+        print(data)
         res = controller.allocate(data)
         if res:
             return "success", 200

@@ -1,0 +1,24 @@
+#main_content{
+    height: 25em;
+}
+
+#log_parent{
+    height: 25em;
+    margin-top: 2em;
+}
+
+#mason_selector{
+    margin-bottom: 1em;
+}
+
+#mason_controller{
+    margin-top: 1em;
+}
+
+.dist{
+    width: 5em;
+}
+
+#allocate_button{
+    float:right;
+}

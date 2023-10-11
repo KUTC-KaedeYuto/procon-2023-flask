@@ -6,6 +6,11 @@ const match_selector = document.querySelector("#match_selector");
 const logger = document.querySelector("#log_parent");
 const debugger_div = document.querySelector("#debugger_area");
 const response_viewer = document.querySelector('#response_viewer');
+const mason_selector = document.querySelector('#mason_selector');
+const allocate_button = document.querySelector("#allocate_button");
+const mason_action_selector = document.querySelector("#mason_action_selector");
+const dist_x = document.querySelector("#dist_x");
+const dist_y = document.querySelector("#dist_y");
 const action_type = ['待機', '移動', '建築', '破壊'];
 const action_dir = ['無向','左上', '上', '右上', '右', '右下', '下', '左下', '左'];
 
@@ -14,6 +19,7 @@ let token = 'token1';
 let interval_id = -1;
 let match_list = [];
 let shown_log_id = [];
+let controller;
 
 // 画像読み込み
 const sprite = {
@@ -240,6 +246,24 @@ function getLogElement(log_line){
   return result;
 }
 
+function updateMason(){
+  mason_list = controller.mason_list;
+  console.log(mason_list);
+  result = '';
+  for(let i = 0; i < mason_list.length; i++){
+    let mason = mason_list[i];
+    result += `<option value="${mason.id}">id:${mason.id}, pos:(${mason.location.x}, ${mason.location.y})</option>`;
+  }
+  mason_selector.innerHTML = result
+}
+
+
+function showActions(mason){
+  let result = '';
+  result = JSON.stringify(mason.actions, null, 2);
+  document.querySelector("#mason_action_list").innerHTML = result;
+}
+
 document.querySelector("#get_match_list_button").addEventListener("click", function(){
   token = document.querySelector("#token_input").value;
   if(interval_id != -1) clearInterval(interval_id);
@@ -281,9 +305,8 @@ function update_board(){
     }
   }).done((data, status, xhr) => {
     if(data == "Too early") return;
-    let res_json = data;
-    update_map_data(res_json);
-    updateLog(res_json['logs']);
+    update_map_data(data);
+    updateLog(data['logs']);
   }).fail((err) => {
     debugger_div.innerHTML = err.responseText;
     console.log(err.status_code);
@@ -293,15 +316,50 @@ function update_board(){
     type: 'get',
     url: '/controller'
   }).done((data) => {
-    console.log(data);
+    controller = data;
     response_viewer.innerHTML = `<pre>${JSON.stringify(data.mason_list, null, 2)}</pre>`;
-  })
+  });
 }
 
 document.querySelector("#get_match_info_button").addEventListener("click", function(){
   connectId = +document.querySelector("#match_selector").value;
+  if (interval_id != -1) clearInterval(interval_id);
   update_board();
+  setTimeout(function(){
+    updateMason();
+  }, 3000);
   interval_id = setInterval(update_board, 1000);
+});
+
+document.querySelector("#update_mason_button").addEventListener("click", updateMason);
+document.querySelector("#select_mason_button").addEventListener("click", function(){
+  document.querySelector("#mason_controller").classList.remove("d-none");
+  let value = +mason_selector.value;
+  showActions(controller.mason_list[value]);
+});
+
+allocate_button.addEventListener("click", function(){
+  allocate_button.disabled = true;
+  $.ajax({
+    type: 'POST',
+    url  : '/allocate',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    data: JSON.stringify({
+      'mason_id': +mason_selector.value,
+      'action_type': mason_action_selector.value,
+      'action_data': {
+          'x': +dist_x.value,
+          'y': +dist_y.value
+      }
+    })
+  }).done((data, status, xhr) => {
+    allocate_button.disabled = false;
+    console.log(data);
+  }).fail((err) => {
+    allocate_button.disabled = false;
+  });
 });
 
 canvas.addEventListener("click", (e) => {
@@ -313,4 +371,6 @@ canvas.addEventListener("click", (e) => {
     const clickedCol = Math.floor(mouseX / colSize);
 
     console.log(`cliked:${clickedRow},${clickedCol}`);
+    dist_x.value = clickedCol;
+    dist_y.value = clickedRow;
 })

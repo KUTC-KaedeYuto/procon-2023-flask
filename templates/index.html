@@ -7,6 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="container">
@@ -16,28 +17,52 @@
                 <canvas id="js_canvas" width="500" height="500"></canvas>
             </div>
             <div class="col">
-                <div class="row" style="height: 50em;">
-                <div class="col container">
-                    <div class="inputMenu row">
-                        <div class="inputToken col">
-                            <input type="text" name="procon-token" id="token_input" placeholder="tokenを入力" class="form-control d-inline">
-                            <button type="button" id="get_match_list_button" class="btn btn-primary">試合一覧取得</button>
+                <div id="main_content" class="row">
+                    <div class="col container">
+                        <div class="row">
+                            <div class="col">
+                                <input type="text" name="procon-token" id="token_input" placeholder="tokenを入力" class="form-control d-inline">
+                                <button type="button" id="get_match_list_button" class="btn btn-primary">試合一覧取得</button>
+                            </div>
+                            <div class="col">
+                                <select name="" id="match_selector" class="form-control">
+                                    <option value="">no matches found</option>
+                                </select>
+                                <button type="button" id="get_match_info_button" class="btn btn-primary">試合状況取得</button>
+                            </div>
                         </div>
-                        <div class="selectMatchID col">
-                            <select name="" id="match_selector" class="form-control">
-                                <option value="">no matches found</option>
-                            </select>
-                            <button type="button" id="get_match_info_button" class="btn btn-primary">試合状況取得</button>
+                        <div class="accordion row container overflow-y-auto" id="log_parent">
                         </div>
                     </div>
+                    <div class="col">
+                        <div>
+                            <label for="mason_list">職人を選択</label>
+                            <select name="mason_list" id="mason_selector" class="form-control">
+                                <option value="">no masons found</option>
+                            </select>
+                            <button type="button" class="btn btn-secondary" id="update_mason_button">職人情報更新</button>
+                            <button type="button" class="btn btn-primary" id="select_mason_button">選択</button>
+                        </div>
+                        <div id="mason_controller" class="d-none">
+                            <label for="action_type">行動タイプ</label>
+                            <select name="action_type" id="mason_action_selector" class="form-control">
+                                <option value="move">移動</option>
+                                <option value="build">建築</option>
+                                <option value="destroy">破壊</option>
+                            </select>
+                            <label>目的地座標</label><br>
+                            <label for="dist_x">x:</label>
+                            <input type="number" name="dist_x" id="dist_x" class="d-inline dist" value="0">
+                            <label for="dist_y">y:</label>
+                            <input type="number" name="dist_y" id="dist_y" class="d-inline dist" value="0"><br>
+                            <button type="button" id="allocate_button" class="btn btn-primary">割り当て</button>
+                        </div>
+                        <div id="mason_action_list"></div>
+                    </div>
                 </div>
-                <div class="accordion col container overflow-y-auto" id="log_parent" style="height: 50%;">
-                </div>
-            </div>
-            <div class="row"></div>
+                <div class="row"></div>
             </div>
         </div>
-        
     </div>
     <div id="response_viewer"></div>
     <div id="debugger_area"></div>
