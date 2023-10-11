@@ -362,6 +362,10 @@ allocate_button.addEventListener("click", function(){
   });
 });
 
+document.querySelector("#test_button")?.addEventListener("click", () => {
+  fetch("/test");
+});
+
 canvas.addEventListener("click", (e) => {
     const rect = canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;

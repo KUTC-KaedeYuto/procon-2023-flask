@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GUI</title>
+    <link href="/static/lib/bootstrap.min.css" rel="stylesheet">
+    <script src="/static/lib/bootstrap.bundle.min.js"></script>
+    <script src="/static/lib/jquery.min.js"></script>
+</head>
+
+<body>
+    <div class="container-fluid">
+        <h1 id="title">操作するやつ</h1>
+        <div class="mt-2 mb-3">
+            <button id="test_button" class="btn btn-primary">
+                自動実行 (test)
+            </button>
+        </div>
+        <div class="row">
+            <div class="col-8 container">
+                <canvas id="js_canvas" width="500" height="500"></canvas>
+            </div>
+            <div class="col-4">
+                <div class="accordion col container overflow-y-auto" id="log_parent" style="height: 50%;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Off Canvas Button -->
+        <div class="position-fixed bottom-0 start-0 p-3">
+            <button class="btn btn-outline-primary" type="button" data-bs-toggle="offcanvas"
+                data-bs-target="#offcanvasExample" aria-controls="offcanvasExample">
+                Menu
+            </button>
+        </div>
+    </div>
+    <div id="response_viewer"></div>
+    <div id="debugger_area"></div>
+
+
+
+    <!-- Off Canvas Body -->
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasExample" aria-labelledby="offcanvasExampleLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="offcanvasExampleLabel">Offcanvas</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <div class="inputMenu">
+                <div class="inputToken">
+                    <input type="text" name="procon-token" id="token_input" placeholder="tokenを入力"
+                        class="form-control d-inline">
+                    <button type="button" id="get_match_list_button" class="btn btn-primary">試合一覧取得</button>
+                </div>
+                <div class="selectMatchID mt-4">
+                    <select name="" id="match_selector" class="form-control">
+                        <option value="">no matches found</option>
+                    </select>
+                    <button type="button" id="get_match_info_button" class="btn btn-primary">試合状況取得</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="/static/script.js"></script>
+</body>
+
+</html>

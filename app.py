@@ -25,7 +25,7 @@ def post(url: str, token: str, header: dict, body):
 
 @app.route("/")
 def get_page():
-    return render_template('index.html')
+    return render_template('index_new.html')
 
 @app.route("/matches")
 def get_match_list():
