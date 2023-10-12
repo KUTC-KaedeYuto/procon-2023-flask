@@ -380,6 +380,7 @@ document.querySelector("#get_match_info_button").addEventListener("click", funct
 document.querySelector("#update_mason_button").addEventListener("click", updateMason);
 document.querySelector("#select_mason_button").addEventListener("click", function(){
   document.querySelector("#mason_controller").classList.remove("d-none");
+  document.querySelector("#mason_action_editor").classList.remove("d-none");
   let value = +mason_selector.value;
   showActions(controller.mason_list[value - 1]);
 });
@@ -402,7 +403,6 @@ allocate_button.addEventListener("click", function(){
     })
   }).done((data, status, xhr) => {
     allocate_button.disabled = false;
-    document.querySelector("#mason_action_editor").classList.remove("d-none");
     console.log(data);
   }).fail((err) => {
     allocate_button.disabled = false;

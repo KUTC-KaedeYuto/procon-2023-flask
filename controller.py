@@ -3,6 +3,7 @@ import time
 from typing import *
 from typing import Union
 from aster import *
+from random import random
 from copy import copy
 
 from aster import Union
@@ -163,9 +164,11 @@ class MoveAction(ActionBase):
         new_pos.y += next_vec.y
         return new_pos
         
+    def isDone(self) -> bool:
+        return self.mason.location == self.dist
     
     def availableNext(self) -> bool:
-        if super().isDone():
+        if self.isDone():
             return False
         new_pos = self.__getNextPos()
         cell = self.board['fixed_board'][new_pos.y][new_pos.x]
@@ -236,8 +239,11 @@ class ConstructionActionBase(ActionBase):
         new_pos.y += next_vec.y
         return new_pos
     
+    def isDone(self) -> bool:
+        return super().isDone()
+    
     def availableNext(self) -> bool:
-        if super().isDone():
+        if self.isDone():
             return False
         new_pos = self.__getNextPos()
         cell = self.board['fixed_board'][new_pos.y][new_pos.x]
@@ -295,6 +301,10 @@ class BuildAction(ConstructionActionBase):
         self.actions[-1].type = 'build'
         return res
     
+    def isDone(self) -> bool:
+        cell = self.board['fixed_board'][self.dist.y][self.dist.x]
+        return cell['wall'] == 1
+
     def availableNext(self) -> bool:
         return super().availableNext()
     
@@ -309,6 +319,10 @@ class DestroyAction(ConstructionActionBase):
         res = super().actionInit()
         self.actions[-1].type = 'destroy'
         return res
+    
+    def isDone(self) -> bool:
+        cell = self.board['fixed_board'][self.dist.y][self.dist.x]
+        return cell['wall'] == 0
     
     def availableNext(self) -> bool:
         return super().availableNext()
@@ -368,6 +382,29 @@ class Mason:
         if action:
             self.actions.append(action)
         return action != None
+    
+    def allocateAutoAction(self):
+        castles = []
+        for i in range(len(self.board['fixed_board'])):
+            for j in range(len(self.board['fixed_board'][i])):
+                cell = self.board['fixed_board'][i][j]
+                if cell['structure'] == 2 and cell['territory'] % 2 == 0:
+                    castles.append(Vec2D(j, i))
+        castles.sort(key=lambda v : distance(self.location, v) + random() * 0.01)
+        if len(castles) >= 1:
+            dist = castles[0]
+            result = False
+            for v in [Vec2D(0, -1), Vec2D(1, 0), Vec2D(0, 1), Vec2D(-1, 0)]:
+                data = {
+                    'x': dist.x + v.x,
+                    'y': dist.y + v.y
+                }
+                if self.board['fixed_board'][data['y']][data['x']]['wall'] != 1:
+                    result = self.allocateAction('build', data) or result
+            self.updateInfo(self.board)
+            return result
+        return False
+
     
     def toDict(self) -> dict:
         return {
@@ -430,6 +467,10 @@ class GameController(threading.Thread):
                     action = mason.nextAction()
                     if action:
                         turn_actions.append(action.toPostData())
+                    elif mason.allocateAutoAction():
+                        action = mason.nextAction()
+                        if action:
+                            turn_actions.append(action.toPostData())
                     else:
                         turn_actions.append(Action('wait', 0).toPostData())
                 post_data = {

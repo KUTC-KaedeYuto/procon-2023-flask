@@ -3,7 +3,7 @@
 }
 
 #log_parent{
-    height: 25em;
+    max-height: 25em;
     margin-top: 2em;
 }
 

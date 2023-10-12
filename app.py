@@ -160,4 +160,10 @@ def test_method1():
 
     return "success"
 
+@app.route("/test2")
+def test_method2():
+    for m in controller.mason_list:
+        m.allocateAutoAction()
+    return 'success'
+
 app.run(debug=True, port=5000, host='0.0.0.0')
