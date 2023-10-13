@@ -276,7 +276,11 @@ class ConstructionActionBase(ActionBase):
                 if self.actionInit():
                     return self.next()
                 else:
+                    super().finish()
                     return None
+            if action.type == 'build':
+                super().finish()
+                return None
                 
         self.index += 1
         if self.index >= len(self.actions):
@@ -390,18 +394,28 @@ class Mason:
                     castles.append(Vec2D(j, i))
         castles.sort(key=lambda v : distance(self.location, v) + random() * 0.01)
         if len(castles) >= 1:
-            dist = castles[0]
+            dist: Vec2D = castles[0]
             result = False
-            for v in [Vec2D(0, -1), Vec2D(1, 0), Vec2D(0, 1), Vec2D(-1, 0)]:
-                data = {
-                    'x': dist.x + v.x,
-                    'y': dist.y + v.y
-                }
-                if self.board['fixed_board'][data['y']][data['x']]['wall'] != 1:
-                    result = self.allocateAction('build', data) or result
+            objectives = self.getBuildPos(dist, set(), set())
+            for o in objectives:
+                if self.board['fixed_board'][o.y][o.x]['wall'] != 1:
+                    result = self.allocateAction('build', {'x': o.x, 'y': o.y}) or result
             self.updateInfo(self.board)
             return result
         return False
+    
+    def getBuildPos(self, pos:Vec2D, castles: Set[Vec2D], objectives: Set[Vec2D]) -> Set[Vec2D]:
+        cell = self.board['fixed_board'][pos.y][pos.x]
+        if cell['structure'] != 2:
+            objectives.add(pos)
+            return objectives
+        castles.add(pos)
+        for v in [Vec2D(-1, 0), Vec2D(1, 0), Vec2D(0, -1), Vec2D(0, 1)]:
+            npos = Vec2D(pos.x + v.x, pos.y + v.y)
+            if npos in castles or npos in objectives:
+                continue
+            objectives = self.getBuildPos(npos, castles, objectives)
+        return objectives
 
     
     def toDict(self) -> dict:
@@ -505,6 +519,15 @@ class GameController(threading.Thread):
         self.__locking_info = False
         for mason in self.mason_list:
             mason.updateInfo(self.getInfo())
+        if(len(info['logs']) == 0): 
+            return
+        new_log = info['logs'][-1]
+        if (new_log['turn'] %2 == 1) == self.first:
+            for i in range(len(new_log['actions'])):
+                a = new_log['actions'][i]
+                if not a['succeeded']:
+                    m = self.mason_list[i]
+                    m.actions[m.action_index].initialized = False
             
 
     def getInfo(self) -> Union[dict, None]:

@@ -26,3 +26,7 @@
 #mason_action_editor{
     margin-top: 2em;
 }
+
+#action_list_parent{
+    max-height: 13em;
+}

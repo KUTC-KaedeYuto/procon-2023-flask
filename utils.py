@@ -13,6 +13,9 @@ class Vec2D:
             return False
         return self.x == other.x and self.y == other.y
     
+    def __hash__(self) -> int:
+        return hash(self.__str__())
+    
     def __str__(self) -> str:
         return str(self.x) + "," + str(self.y)
     
