@@ -27,17 +27,20 @@ let interval_id = -1;
 let match_list = [];
 let shown_log_id = [];
 let controller;
-let last_clicked_action_element = null;
+let field;
+let last_clicked_action_id = -1;
 
 // 画像読み込み
 const sprite = {
     craftsman: new Image(),
     castle: new Image(),
     wall: new Image(),
+    cursor: new Image(),
   };
   sprite.craftsman.src = "/static/img/craftsman.png";
   sprite.castle.src = "/static/img/castle.png";
   sprite.wall.src = "/static/img/wall.jpg";
+  sprite.cursor.src = "/static/img/selected.png";
   
   // 競技フィールドのクラス
   class Field {
@@ -46,6 +49,8 @@ const sprite = {
     #cellSize;
     #board;
     #fstFlag;
+    #clicked;
+
     constructor() {
       this.#fstFlag = true;
     }
@@ -61,9 +66,8 @@ const sprite = {
   
     // 状態の取得と反映
     update(data) {
+      this.#board = data.board;
       if (this.#fstFlag) {
-        this.#board = data.board;
-  
         this.init();
         this.#fstFlag = false;
       }
@@ -130,7 +134,7 @@ const sprite = {
               sprite.wall,
               x * this.#cellSize + 7, y * this.#cellSize + 7,
               this.#cellSize - 14, this.#cellSize - 14
-            )
+            );
             this.#ctx.restore();
           }
           // 城
@@ -140,7 +144,7 @@ const sprite = {
               sprite.castle,
               x * this.#cellSize + 1, y * this.#cellSize + 1,
               this.#cellSize - 2, this.#cellSize - 2
-            )
+            );
             this.#ctx.restore();
           }
           // 職人
@@ -161,6 +165,14 @@ const sprite = {
               (x + 0.5) * this.#cellSize, (y + 0.5) * this.#cellSize
             );
             this.#ctx.restore();
+          }
+          if(this.#clicked != null){
+            let x = this.#clicked.x, y =this.#clicked.y;
+            this.#ctx.drawImage(
+              sprite.cursor,
+              x * this.#cellSize + 1, y * this.#cellSize + 1,
+              this.#cellSize - 2, this.#cellSize - 2
+            );
           }
         }
       }
@@ -194,6 +206,14 @@ const sprite = {
       }
       this.#ctx.restore();
     }
+
+    onClick(x, y){
+      this.#clicked = {
+        'x': x,
+        'y': y
+      };
+      this.draw(this.process_field(this.#board));
+    }
   }
   
 
@@ -209,13 +229,14 @@ function drawGrid(rows, cols) {
 }
 
 function update_map_data(response) {
-    let field = new Field();
+    if(field == null) {
+      field = new Field();
+      let cols = response.board.height;
+      let rows = response.board.width;
+      rowSize = canvas.height/cols;
+      colSize = canvas.width/rows;
+    }
     field.update(response);
-    let cols = response.board.height;
-    let rows = response.board.width;
-    rowSize = canvas.height/cols;
-    colSize = canvas.width/rows;
-
 }
 
 function updateLog(log){
@@ -254,21 +275,23 @@ function getLogElement(log_line){
   return result;
 }
 
-function updateMason(){
-  console.log(controller.mason_list);
-  mason_list = controller.mason_list;
-  console.log(mason_list);
+function updateMasonSelector(){
   result = '';
   for(let i = 0; i < mason_list.length; i++){
     let mason = mason_list[i];
     result += `<option value="${mason.id}">id:${mason.id}, pos:(${mason.location.x}, ${mason.location.y})</option>`;
   }
-  mason_selector.innerHTML = result
+  mason_selector.innerHTML = result;
+}
+
+function updateMasonList(){
+  mason_list = controller.mason_list;
+  let value = +mason_selector.value;
+  if(value >= 1) showActions(controller.mason_list[value - 1]);
 }
 
 
 function showActions(mason){
-  console.log(mason);
   const action_map = {
     'WaitAction': '待機',
     'MoveAction': '移動',
@@ -279,24 +302,30 @@ function showActions(mason){
   for(let i = mason.action_index; i < mason.actions.length; i++){
     let action = mason.actions[i];
     let item =
-`<li class="list-group-item${i == mason.action_index ? " active" : ""}"  data-action_id=${i}>
+`<li class="list-group-item${i == mason.action_index ? " active" : ""}${i == last_clicked_action_id ? " list-group-item-info" : ""}"  data-action_id=${i}>
     行動:${action_map[action.type]}, 目的地:(${action.dist.x},${action.dist.y})
 </li>`;
     result += item;
   }
   mason_action_list.innerHTML = result;
   for(let child of mason_action_list.children) {
-    console.log(child);
     child.addEventListener("click", function(){onClickAction(this);});
   }
 }
 
 function onClickAction(element){
-  if(last_clicked_action_element != null) last_clicked_action_element.classList.remove("list-group-item-info");
-  if(element === last_clicked_action_element){
+  if(last_clicked_action_id != -1) {
+    for(let child of mason_action_list.children){
+      if(+child.dataset.action_id == last_clicked_action_id){
+        child.classList.remove("list-group-item-info");
+        break;
+      }
+    }
+  }
+  if(+element.dataset.action_id == last_clicked_action_id){
     edit_collapse.classList.add("d-none");
     delete_collapse.classList.add("d-none");
-    last_clicked_action_element = null;
+    last_clicked_action_id = -1;
   }else {
     delete_collapse.classList.remove("d-none");
     if(element === mason_action_list.children[0]){
@@ -305,7 +334,7 @@ function onClickAction(element){
       element.classList.add("list-group-item-info");
       edit_collapse.classList.remove("d-none");
     }
-    last_clicked_action_element = element;
+    last_clicked_action_id = +element.dataset.action_id;
   }
   
 }
@@ -352,6 +381,7 @@ function update_board(){
   }).done((data, status, xhr) => {
     if(data == "Too early") return;
     update_map_data(data);
+    updateMasonList();
     updateLog(data['logs']);
   }).fail((err) => {
     debugger_div.innerHTML = err.responseText;
@@ -371,13 +401,10 @@ document.querySelector("#get_match_info_button").addEventListener("click", funct
   connectId = +document.querySelector("#match_selector").value;
   if (interval_id != -1) clearInterval(interval_id);
   update_board();
-  setTimeout(function(){
-    updateMason();
-  }, 3000);
   interval_id = setInterval(update_board, 1000);
 });
 
-document.querySelector("#update_mason_button").addEventListener("click", updateMason);
+document.querySelector("#update_mason_button").addEventListener("click", updateMasonSelector);
 document.querySelector("#select_mason_button").addEventListener("click", function(){
   document.querySelector("#mason_controller").classList.remove("d-none");
   document.querySelector("#mason_action_editor").classList.remove("d-none");
@@ -403,7 +430,7 @@ allocate_button.addEventListener("click", function(){
     })
   }).done((data, status, xhr) => {
     allocate_button.disabled = false;
-    console.log(data);
+    updateMasonList();  
   }).fail((err) => {
     allocate_button.disabled = false;
   });
@@ -414,9 +441,13 @@ delete_action_button.addEventListener("click", function(){
     mason_id: +mason_selector.value,
     method: 'delete',
     option: {
-      index: +last_clicked_action_element.dataset.action_id
+      index: last_clicked_action_id
     }
   };
+  for(let child of mason_action_list.children){
+    if(+child.dataset.action_id == last_clicked_action_id) onClickAction(child);
+    break;
+  }
   $.ajax({
     type: 'POST',
     url: '/change',
@@ -425,6 +456,7 @@ delete_action_button.addEventListener("click", function(){
     },
     data: JSON.stringify(data)
   }).done((data, status, xhr) => {
+    updateMasonList();
     console.log(data);
   });
 });
@@ -434,6 +466,7 @@ document.querySelector("#test_button")?.addEventListener("click", () => {
 });
 
 canvas.addEventListener("click", (e) => {
+    if(field == null) return;
     const rect = canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
@@ -442,6 +475,7 @@ canvas.addEventListener("click", (e) => {
     const clickedCol = Math.floor(mouseX / colSize);
 
     console.log(`cliked:${clickedRow},${clickedCol}`);
+    field.onClick(clickedCol, clickedRow);
     dist_x.value = clickedCol;
     dist_y.value = clickedRow;
 });
