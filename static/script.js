@@ -111,13 +111,35 @@ const sprite = {
             this.#ctx.fill();
             this.#ctx.restore();
           }
+          // 池
+          if (r.structure == 1) {
+            this.#ctx.save();
+            this.#ctx.beginPath();
+            this.#ctx.fillStyle = "#aaf";
+            this.#ctx.rect(
+              x * this.#cellSize + 3, y * this.#cellSize + 3,
+              this.#cellSize - 6, this.#cellSize - 6
+            );
+            this.#ctx.fill();
+            this.#ctx.restore();
+          }
           // 属性 (中立、陣地、城壁)
           if (r.wall != 0) {
             this.#ctx.save();
             this.#ctx.drawImage(
               sprite.wall,
-              x * this.#cellSize + 4, y * this.#cellSize + 4,
-              this.#cellSize - 8, this.#cellSize - 8
+              x * this.#cellSize + 7, y * this.#cellSize + 7,
+              this.#cellSize - 14, this.#cellSize - 14
+            )
+            this.#ctx.restore();
+          }
+          // 城
+          if (r.structure == 2) {
+            this.#ctx.save();
+            this.#ctx.drawImage(
+              sprite.castle,
+              x * this.#cellSize + 1, y * this.#cellSize + 1,
+              this.#cellSize - 2, this.#cellSize - 2
             )
             this.#ctx.restore();
           }
@@ -138,28 +160,6 @@ const sprite = {
               r.mason,
               (x + 0.5) * this.#cellSize, (y + 0.5) * this.#cellSize
             );
-            this.#ctx.restore();
-          }
-          // 池
-          if (r.structure == 1) {
-            this.#ctx.save();
-            this.#ctx.beginPath();
-            this.#ctx.fillStyle = "#aaf";
-            this.#ctx.rect(
-              x * this.#cellSize + 1, y * this.#cellSize + 1,
-              this.#cellSize - 2, this.#cellSize - 2
-            );
-            this.#ctx.fill();
-            this.#ctx.restore();
-          }
-          // 城
-          if (r.structure == 2) {
-            this.#ctx.save();
-            this.#ctx.drawImage(
-              sprite.castle,
-              x * this.#cellSize + 1, y * this.#cellSize + 1,
-              this.#cellSize - 2, this.#cellSize - 2
-            )
             this.#ctx.restore();
           }
         }
