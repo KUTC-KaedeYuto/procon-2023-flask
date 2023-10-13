@@ -15,6 +15,12 @@ class Vec2D:
     
     def __str__(self) -> str:
         return str(self.x) + "," + str(self.y)
+    
+    def toDict(self) -> dict:
+        return {
+            'x': self.x,
+            'y': self.y
+        }
 
 class OriginalJSONEncoder(json.JSONEncoder):
     def default(self, o: Any) -> Any:

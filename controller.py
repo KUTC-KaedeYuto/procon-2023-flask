@@ -62,7 +62,7 @@ class Action:
     def toDict(self) -> dict:
         return {
             'type': self.type,
-            'dir': self.direction
+            'dir': direction_to_vector(self.direction).toDict()
         }
     
     def __str__(self) -> str:
@@ -200,7 +200,7 @@ class MoveAction(ActionBase):
     
     def toDict(self) -> dict:
         result = super().toDict()
-        result['dist'] = self.dist
+        result['dist'] = self.dist.toDict()
         result['actions'] = [a.toDict() for a in self.actions]
         result['index'] = self.index
         return result
@@ -276,10 +276,8 @@ class ConstructionActionBase(ActionBase):
                 if self.actionInit():
                     return self.next()
                 else:
-                    super().finish()
                     return None
-
-        action = self.actions[self.index]
+                
         self.index += 1
         if self.index >= len(self.actions):
             super().finish()
@@ -287,7 +285,7 @@ class ConstructionActionBase(ActionBase):
     
     def toDict(self) -> dict:
         result = super().toDict()
-        result['dist'] = self.dist
+        result['dist'] = self.dist.toDict()
         result['actions'] = [a.toDict() for a in self.actions]
         result['index'] = self.index
         return result
@@ -411,7 +409,7 @@ class Mason:
             'id': self.id,
             'actions': [action.toDict() for action in self.actions],
             'action_index': self.action_index,
-            'location': self.location
+            'location': self.location.toDict()
         }
 
 
@@ -467,12 +465,14 @@ class GameController(threading.Thread):
                     action = mason.nextAction()
                     if action:
                         turn_actions.append(action.toPostData())
-                    elif mason.allocateAutoAction():
-                        action = mason.nextAction()
-                        if action:
-                            turn_actions.append(action.toPostData())
                     else:
-                        turn_actions.append(Action('wait', 0).toPostData())
+                        res = mason.allocateAutoAction()
+                        if res:
+                            action = mason.nextAction()
+                            if action:
+                                turn_actions.append(action.toPostData())
+                        else:
+                            turn_actions.append(Action('wait', 0).toPostData())
                 post_data = {
                     'turn': self.posted_turn + 2,
                     'actions': turn_actions
