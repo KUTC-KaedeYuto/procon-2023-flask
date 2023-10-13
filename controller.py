@@ -522,7 +522,7 @@ class GameController(threading.Thread):
         if(len(info['logs']) == 0): 
             return
         new_log = info['logs'][-1]
-        if (new_log['turn'] %2 == 1) == self.first:
+        if (new_log['turn'] %2 == 1) == self.first and len(self.mason_list) == len(new_log['actions']):
             for i in range(len(new_log['actions'])):
                 a = new_log['actions'][i]
                 if not a['succeeded']:

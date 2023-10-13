@@ -36,11 +36,18 @@ const sprite = {
     castle: new Image(),
     wall: new Image(),
     cursor: new Image(),
+    flag: new Image(),
+    plus: new Image(),
+    hammer: new Image()
   };
-  sprite.craftsman.src = "/static/img/craftsman.png";
-  sprite.castle.src = "/static/img/castle.png";
-  sprite.wall.src = "/static/img/wall.jpg";
-  sprite.cursor.src = "/static/img/selected.png";
+sprite.craftsman.src = "/static/img/craftsman.png";
+sprite.castle.src = "/static/img/castle.png";
+sprite.wall.src = "/static/img/wall.jpg";
+sprite.cursor.src = "/static/img/selected.png";
+sprite.flag.src = "/static/img/flag.png";
+sprite.plus.src = "/static/img/plus.png";
+sprite.hammer.src = "/static/img/hammer.png";
+
   
   // 競技フィールドのクラス
   class Field {
@@ -50,9 +57,11 @@ const sprite = {
     #board;
     #fstFlag;
     #clicked;
+    #shown_icons;
 
     constructor() {
       this.#fstFlag = true;
+      this.#shown_icons = [];
     }
   
     init() {
@@ -104,7 +113,7 @@ const sprite = {
           let r = field[y][x];
           // チーム属性
           if (r.territory != 0) {
-            let colors = ["#ccc", "#fcc", "#cfc", "#ffc"];
+            let colors = ["#ccc", "#cfc", "#fcc", "#ffc"];
             this.#ctx.save();
             this.#ctx.beginPath();
             this.#ctx.fillStyle = colors[r.territory];
@@ -151,7 +160,7 @@ const sprite = {
           if (r.mason != 0) {
             this.#ctx.save();
             //this.#ctx.beginPath();
-            this.#ctx.fillStyle = (r.mason > 0 ? "#a00" : "#0a0");
+            this.#ctx.fillStyle = (r.mason > 0 ? "#0a0" : "#a00");
             this.#ctx.font = "bold 20pt sans-serif";
             this.#ctx.textAlign = "center";
             this.#ctx.textBaseline = "middle";
@@ -166,15 +175,29 @@ const sprite = {
             );
             this.#ctx.restore();
           }
-          if(this.#clicked != null){
-            let x = this.#clicked.x, y =this.#clicked.y;
-            this.#ctx.drawImage(
-              sprite.cursor,
-              x * this.#cellSize + 1, y * this.#cellSize + 1,
-              this.#cellSize - 2, this.#cellSize - 2
-            );
-          }
         }
+      }          
+      //アイコン
+      this.#ctx.save();
+      this.#ctx.globalAlpha = 0.8;
+      
+      for(let d of this.#shown_icons){
+        this.#ctx.drawImage(
+          d.sprite,
+          d.x * this.#cellSize + 1, d.y * this.#cellSize + 1,
+          this.#cellSize - 2, this.#cellSize - 2
+        );
+      }
+      this.#ctx.restore();
+
+      //カーソル
+      if(this.#clicked != null){
+        let x = this.#clicked.x, y =this.#clicked.y;
+        this.#ctx.drawImage(
+          sprite.cursor,
+          x * this.#cellSize + 1, y * this.#cellSize + 1,
+          this.#cellSize - 2, this.#cellSize - 2
+        );
       }
       this.#ctx.restore();
       this.drawBorders();
@@ -213,6 +236,19 @@ const sprite = {
         'y': y
       };
       this.draw(this.process_field(this.#board));
+    }
+
+    drawIcon(x, y, sprite){
+      this.#shown_icons.push({
+        'x': x,
+        'y': y,
+        'sprite': sprite
+      });
+      this.draw(this.process_field(this.#board));
+    }
+
+    clearIcon(){
+      this.#shown_icons = [];
     }
   }
   
@@ -293,19 +329,34 @@ function updateMasonList(){
 
 function showActions(mason){
   const action_map = {
-    'WaitAction': '待機',
-    'MoveAction': '移動',
-    'BuildAction': '建築',
-    'DestroyAction': '破壊'
+    'WaitAction':{
+      display: '待機',
+    },
+    'MoveAction': {
+      display: '移動',
+      sprite: sprite.flag
+    },
+    'BuildAction': {
+      display: '建築',
+      sprite: sprite.plus
+    },
+    'DestroyAction': {
+      display: '破壊',
+      sprite: sprite.hammer
+    }
   };
+  field.clearIcon();
   let result = '';
   for(let i = mason.action_index; i < mason.actions.length; i++){
     let action = mason.actions[i];
     let item =
 `<li class="list-group-item${i == mason.action_index ? " active" : ""}${i == last_clicked_action_id ? " list-group-item-info" : ""}"  data-action_id=${i}>
-    行動:${action_map[action.type]}, 目的地:(${action.dist.x},${action.dist.y})
+    行動:${action_map[action.type].display}, 目的地:(${action.dist.x},${action.dist.y})
 </li>`;
     result += item;
+    if(i == mason.action_index && action.type != 'WaitAction'){
+      field.drawIcon(action.dist.x, action.dist.y, action_map[action.type].sprite);
+    }
   }
   mason_action_list.innerHTML = result;
   for(let child of mason_action_list.children) {
@@ -445,8 +496,10 @@ delete_action_button.addEventListener("click", function(){
     }
   };
   for(let child of mason_action_list.children){
-    if(+child.dataset.action_id == last_clicked_action_id) onClickAction(child);
-    break;
+    if(+child.dataset.action_id == last_clicked_action_id) {
+      onClickAction(child);
+      break;
+    }
   }
   $.ajax({
     type: 'POST',

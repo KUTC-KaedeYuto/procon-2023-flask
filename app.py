@@ -7,7 +7,6 @@ from utils import OriginalJSONProvider
 
 Flask.json_provider_class = OriginalJSONProvider
 app = Flask(__name__)
-app.logger.setLevel(logging.ERROR)
 home_url = 'http://localhost:3000/'
 controller: Union[GameController , None] = None
 
