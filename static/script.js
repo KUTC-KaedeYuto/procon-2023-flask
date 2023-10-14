@@ -21,6 +21,11 @@ const swap_down_action_button = document.querySelector("#swap_down_action_button
 const action_type = ['待機', '移動', '建築', '破壊'];
 const action_dir = ['無向','左上', '上', '右上', '右', '右下', '下', '左下', '左'];
 
+var point_f = 0
+var point_e = 0
+const point_disp_f = document.querySelector("#flendlyteam_point")
+const point_disp_e = document.querySelector("#enemyteam_point")
+
 let connectId = 10;
 let token = 'token1';
 let interval_id = -1;
@@ -35,6 +40,8 @@ const sprite = {
     craftsman: new Image(),
     castle: new Image(),
     wall: new Image(),
+    wall_red: new Image(),
+    wall_green: new Image(),
     cursor: new Image(),
     flag: new Image(),
     plus: new Image(),
@@ -43,6 +50,8 @@ const sprite = {
 sprite.craftsman.src = "/static/img/craftsman.png";
 sprite.castle.src = "/static/img/castle.png";
 sprite.wall.src = "/static/img/wall.jpg";
+sprite.wall_red.src = "/static/img/wall_red.png";
+sprite.wall_green.src = "/static/img/wall_green.png";
 sprite.cursor.src = "/static/img/selected.png";
 sprite.flag.src = "/static/img/flag.png";
 sprite.plus.src = "/static/img/plus.png";
@@ -85,6 +94,8 @@ sprite.hammer.src = "/static/img/hammer.png";
   
     process_field(board){
       let field = Array()
+      point_f = 0
+      point_e = 0
       for(let i = 0; i < board.height; i++){
         field.push(Array());
         for(let j = 0; j < board.width; j++){
@@ -92,6 +103,14 @@ sprite.hammer.src = "/static/img/hammer.png";
           let wall = board.walls[i][j];
           let territory = board.territories[i][j];
           let mason = board.masons[i][j];
+          
+          if (structure == 2 && territory == 1) point_f += 100
+          else if (territory == 1) point_f += 10
+          if (structure == 2 && territory == 2) point_e += 100
+          else if (territory == 2) point_e += 10
+          if (wall == 1) point_f += 30
+          if (wall == 2) point_e += 30
+
           let region = {
             'structure': structure,
             'wall': wall,
@@ -101,6 +120,10 @@ sprite.hammer.src = "/static/img/hammer.png";
           field[i].push(region);
         }
       }
+      
+      point_disp_f.innerHTML = "味方チーム:" + point_f
+      point_disp_e.innerHTML = "敵チーム:" + point_e
+
       return field;
     }
   
