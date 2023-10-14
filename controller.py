@@ -306,7 +306,7 @@ class BuildAction(ConstructionActionBase):
     
     def isDone(self) -> bool:
         cell = self.board['fixed_board'][self.dist.y][self.dist.x]
-        return cell['wall'] == 1
+        return cell['wall'] == 1 or super().isDone()
 
     def availableNext(self) -> bool:
         return super().availableNext()
@@ -326,7 +326,7 @@ class DestroyAction(ConstructionActionBase):
     
     def isDone(self) -> bool:
         cell = self.board['fixed_board'][self.dist.y][self.dist.x]
-        return cell['wall'] == 0
+        return cell['wall'] == 0 or super().isDone()
     
     def availableNext(self) -> bool:
         return super().availableNext()
@@ -352,11 +352,14 @@ class Mason:
             action.updateInfo(board)
     
     def nextAction(self) -> Union[Action, None]:
+        print(self.toDict())
         if self.action_index >= len(self.actions):
             return None
         
         current_action_type = self.actions[self.action_index]
+        print(current_action_type.isDone())
         if current_action_type.isDone():
+            print("called")
             self.action_index += 1
             return self.nextAction()
         if not current_action_type.initialized:
@@ -364,7 +367,10 @@ class Mason:
             if not res:
                 self.action_index += 1
                 return self.nextAction()
-        return current_action_type.next()
+        res = current_action_type.next()
+        if res:
+            return res
+        return self.nextAction()
     
     def getAction(self, type, data) -> Union[None, MoveAction, BuildAction, DestroyAction, WaitAction]:
         if type == 'move':
@@ -470,13 +476,14 @@ class GameController(threading.Thread):
 
 
     def run(self) -> None:
+        turn_actions = [] 
         while self.initialized and not self.__break_flag:
             self.updateInfo()
             if not self.__match_info:
                 continue
             current_turn = self.__match_info['turn'] + 1
-            if (current_turn %2 == 1) == self.first and self.posted_turn < current_turn:
-                turn_actions = []
+            print("current_turn=",current_turn, ",posted=",self.posted_turn)
+            if (current_turn %2 == 1) == self.first and self.posted_turn < current_turn and len(turn_actions) == 0:
                 for mason in self.mason_list:
                     action = mason.nextAction()
                     if action:
@@ -487,8 +494,13 @@ class GameController(threading.Thread):
                             action = mason.nextAction()
                             if action:
                                 turn_actions.append(action.toPostData())
+                            else:
+                                turn_actions.append(Action('wait', 0).toPostData())
                         else:
                             turn_actions.append(Action('wait', 0).toPostData())
+            while current_turn - self.posted_turn > 2:
+                self.posted_turn += 2
+            if len(turn_actions) > 0:
                 post_data = {
                     'turn': self.posted_turn + 2,
                     'actions': turn_actions
@@ -496,13 +508,12 @@ class GameController(threading.Thread):
                 print(post_data)
                 res = self.post(f'matches/{self.match_id}', self.token, {'Content-Type': 'application/json'}, json.dumps(post_data))
                 if res.status_code == 200:
+                    turn_actions = []
                     self.posted_turn += 2
                     self.accepted_actions.append({
                         'data': post_data,
                         'accepted_at': res.json()['accepted_at']
                     })
-            elif current_turn - self.posted_turn >= 2:
-                self.posted_turn = current_turn - 1
             time.sleep(0.5)
     
     def updateInfo(self) -> None:
