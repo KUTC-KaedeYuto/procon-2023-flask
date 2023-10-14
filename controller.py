@@ -300,7 +300,8 @@ class BuildAction(ConstructionActionBase):
 
     def actionInit(self) -> bool:
         res = super().actionInit()
-        self.actions[-1].type = 'build'
+        if res:
+            self.actions[-1].type = 'build'
         return res
     
     def isDone(self) -> bool:
@@ -319,7 +320,8 @@ class DestroyAction(ConstructionActionBase):
 
     def actionInit(self) -> bool:
         res = super().actionInit()
-        self.actions[-1].type = 'destroy'
+        if res:
+            self.actions[-1].type = 'destroy'
         return res
     
     def isDone(self) -> bool:

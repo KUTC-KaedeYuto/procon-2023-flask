@@ -10,7 +10,6 @@ app = Flask(__name__)
 home_url = 'http://localhost:3000/'
 controller: Union[GameController , None] = None
 
-
 def get(url: str, token: str):
     header = {
         'procon-token': token
@@ -27,6 +26,18 @@ def post(url: str, token: str, header: dict, body):
 @app.route("/")
 def get_page():
     return render_template('index.html')
+
+@app.route("/linked")
+def linked():
+    return render_template('linked.html')
+
+@app.route("/get_parent")
+def get_parent_data():
+    result = {
+        'token': controller.token,
+        'match_id': controller.match_id
+    }
+    return jsonify(result)
 
 @app.route("/matches")
 def get_match_list():
