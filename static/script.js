@@ -162,11 +162,20 @@ sprite.hammer.src = "/static/img/hammer.png";
           // 属性 (中立、陣地、城壁)
           if (r.wall != 0) {
             this.#ctx.save();
-            this.#ctx.drawImage(
-              sprite.wall,
-              x * this.#cellSize + 7, y * this.#cellSize + 7,
-              this.#cellSize - 14, this.#cellSize - 14
-            );
+            if (r.wall == 2) {
+              this.#ctx.drawImage(
+                sprite.wall_red,
+                x * this.#cellSize + 7, y * this.#cellSize + 7,
+                this.#cellSize - 14, this.#cellSize - 14
+              )
+            }
+            else {
+              this.#ctx.drawImage(
+                sprite.wall_green,
+                x * this.#cellSize + 7, y * this.#cellSize + 7,
+                this.#cellSize - 14, this.#cellSize - 14
+              )
+            }
             this.#ctx.restore();
           }
           // 城
