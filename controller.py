@@ -165,7 +165,7 @@ class MoveAction(ActionBase):
         return new_pos
         
     def isDone(self) -> bool:
-        return self.mason.location == self.dist
+        return self.mason.location == self.dist or super().isDone()
     
     def availableNext(self) -> bool:
         if self.isDone():
