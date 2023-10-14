@@ -104,12 +104,12 @@ sprite.hammer.src = "/static/img/hammer.png";
           let territory = board.territories[i][j];
           let mason = board.masons[i][j];
           
-          if (structure == 2 && territory == 1) point_f += 100
-          else if (territory == 1) point_f += 10
-          if (structure == 2 && territory == 2) point_e += 100
-          else if (territory == 2) point_e += 10
-          if (wall == 1) point_f += 30
-          if (wall == 2) point_e += 30
+          if (structure == 2 && territory == 1) point_f += 100;
+          else if (territory == 1) point_f += 30;
+          if (structure == 2 && territory == 2) point_e += 100;
+          else if (territory == 2) point_e += 30;
+          if (wall == 1) point_f += 10;
+          if (wall == 2) point_e += 10;
 
           let region = {
             'structure': structure,
