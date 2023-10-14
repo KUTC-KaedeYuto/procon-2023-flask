@@ -21,6 +21,11 @@ const swap_down_action_button = document.querySelector("#swap_down_action_button
 const action_type = ['待機', '移動', '建築', '破壊'];
 const action_dir = ['無向','左上', '上', '右上', '右', '右下', '下', '左下', '左'];
 
+var point_f = 0
+var point_e = 0
+const point_disp_f = document.querySelector("#flendlyteam_point")
+const point_disp_e = document.querySelector("#enemyteam_point")
+
 let connectId = 10;
 let token = 'token1';
 let interval_id = -1;
@@ -32,225 +37,252 @@ let last_clicked_action_id = -1;
 
 // 画像読み込み
 const sprite = {
-    craftsman: new Image(),
-    castle: new Image(),
-    wall: new Image(),
-    cursor: new Image(),
-    flag: new Image(),
-    plus: new Image(),
-    hammer: new Image()
-  };
+  craftsman: new Image(),
+  castle: new Image(),
+  wall: new Image(),
+  wall_red: new Image(),
+  wall_green: new Image(),
+  cursor: new Image(),
+  flag: new Image(),
+  plus: new Image(),
+  hammer: new Image()
+};
 sprite.craftsman.src = "/static/img/craftsman.png";
 sprite.castle.src = "/static/img/castle.png";
 sprite.wall.src = "/static/img/wall.jpg";
+sprite.wall_red.src = "/static/img/wall_red.png";
+sprite.wall_green.src = "/static/img/wall_green.png";
 sprite.cursor.src = "/static/img/selected.png";
 sprite.flag.src = "/static/img/flag.png";
 sprite.plus.src = "/static/img/plus.png";
 sprite.hammer.src = "/static/img/hammer.png";
 
-  
-  // 競技フィールドのクラス
-  class Field {
-    #canvas;
-    #ctx;
-    #cellSize;
-    #board;
-    #fstFlag;
-    #clicked;
-    #shown_icons;
 
-    constructor() {
-      this.#fstFlag = true;
-      this.#shown_icons = [];
+// 競技フィールドのクラス
+class Field {
+  #canvas;
+  #ctx;
+  #cellSize;
+  #board;
+  #fstFlag;
+  #clicked;
+  #shown_icons;
+
+  constructor() {
+    this.#fstFlag = true;
+    this.#shown_icons = [];
+  }
+
+  init() {
+    // キャンバス要素の初期設定
+    this.#canvas = canvas;
+    this.#canvas.width = 500;
+    this.#canvas.height = 500;
+    this.#ctx = ctx;
+    this.#cellSize = this.#canvas.width / this.#board.width;
+  }
+
+  // 状態の取得と反映
+  update(data) {
+    this.#board = data.board;
+    if (this.#fstFlag) {
+      this.init();
+      this.#fstFlag = false;
     }
-  
-    init() {
-      // キャンバス要素の初期設定
-      this.#canvas = canvas;
-      this.#canvas.width = 500;
-      this.#canvas.height = 500;
-      this.#ctx = ctx;
-      this.#cellSize = this.#canvas.width / this.#board.width;
-    }
-  
-    // 状態の取得と反映
-    update(data) {
-      this.#board = data.board;
-      if (this.#fstFlag) {
-        this.init();
-        this.#fstFlag = false;
+    this.draw(this.process_field(this.#board));
+  }
+
+  process_field(board){
+    let field = Array()
+    point_f = 0
+    point_e = 0
+    for(let i = 0; i < board.height; i++){
+      field.push(Array());
+      for(let j = 0; j < board.width; j++){
+        let structure = board.structures[i][j];
+        let wall = board.walls[i][j];
+        let territory = board.territories[i][j];
+        let mason = board.masons[i][j];
+        
+        if (structure == 2 && territory == 1) point_f += 100;
+          else if (territory == 1) point_f += 30;
+          if (structure == 2 && territory == 2) point_e += 100;
+          else if (territory == 2) point_e += 30;
+          if (wall == 1) point_f += 10;
+          if (wall == 2) point_e += 10;
+
+        let region = {
+          'structure': structure,
+          'wall': wall,
+          'territory': territory,
+          'mason': mason
+        };
+        field[i].push(region);
       }
-      this.draw(this.process_field(this.#board));
     }
-  
-    process_field(board){
-      let field = Array()
-      for(let i = 0; i < board.height; i++){
-        field.push(Array());
-        for(let j = 0; j < board.width; j++){
-          let structure = board.structures[i][j];
-          let wall = board.walls[i][j];
-          let territory = board.territories[i][j];
-          let mason = board.masons[i][j];
-          let region = {
-            'structure': structure,
-            'wall': wall,
-            'territory': territory,
-            'mason': mason
-          };
-          field[i].push(region);
+    
+    point_disp_f.innerHTML = "味方チーム:" + point_f
+    point_disp_e.innerHTML = "敵チーム:" + point_e
+
+    return field;
+  }
+
+  // フィールドの描画
+  draw(field) {
+    this.clear();
+    this.#ctx.save();
+    for(let y = 0; y < this.#board.height; y++){
+      for(let x = 0; x < this.#board.width; x++){
+        let r = field[y][x];
+        // チーム属性
+        if (r.territory != 0) {
+          let colors = ["#ccc", "#cfc", "#fcc", "#ffc"];
+          this.#ctx.save();
+          this.#ctx.beginPath();
+          this.#ctx.fillStyle = colors[r.territory];
+          this.#ctx.rect(
+            x * this.#cellSize + 1, y * this.#cellSize + 1,
+            this.#cellSize - 2, this.#cellSize - 2
+          );
+          this.#ctx.fill();
+          this.#ctx.restore();
         }
-      }
-      return field;
-    }
-  
-    // フィールドの描画
-    draw(field) {
-      this.clear();
-      this.#ctx.save();
-      for(let y = 0; y < this.#board.height; y++){
-        for(let x = 0; x < this.#board.width; x++){
-          let r = field[y][x];
-          // チーム属性
-          if (r.territory != 0) {
-            let colors = ["#ccc", "#cfc", "#fcc", "#ffc"];
-            this.#ctx.save();
-            this.#ctx.beginPath();
-            this.#ctx.fillStyle = colors[r.territory];
-            this.#ctx.rect(
-              x * this.#cellSize + 1, y * this.#cellSize + 1,
-              this.#cellSize - 2, this.#cellSize - 2
-            );
-            this.#ctx.fill();
-            this.#ctx.restore();
-          }
-          // 池
-          if (r.structure == 1) {
-            this.#ctx.save();
-            this.#ctx.beginPath();
-            this.#ctx.fillStyle = "#aaf";
-            this.#ctx.rect(
-              x * this.#cellSize + 3, y * this.#cellSize + 3,
-              this.#cellSize - 6, this.#cellSize - 6
-            );
-            this.#ctx.fill();
-            this.#ctx.restore();
-          }
-          // 属性 (中立、陣地、城壁)
-          if (r.wall != 0) {
-            this.#ctx.save();
+        // 池
+        if (r.structure == 1) {
+          this.#ctx.save();
+          this.#ctx.beginPath();
+          this.#ctx.fillStyle = "#aaf";
+          this.#ctx.rect(
+            x * this.#cellSize + 3, y * this.#cellSize + 3,
+            this.#cellSize - 6, this.#cellSize - 6
+          );
+          this.#ctx.fill();
+          this.#ctx.restore();
+        }
+        // 属性 (中立、陣地、城壁)
+        if (r.wall != 0) {
+          this.#ctx.save();
+          if (r.wall == 2) {
             this.#ctx.drawImage(
-              sprite.wall,
+              sprite.wall_red,
               x * this.#cellSize + 7, y * this.#cellSize + 7,
               this.#cellSize - 14, this.#cellSize - 14
-            );
-            this.#ctx.restore();
-          }
-          // 城
-          if (r.structure == 2) {
-            this.#ctx.save();
-            this.#ctx.drawImage(
-              sprite.castle,
-              x * this.#cellSize + 1, y * this.#cellSize + 1,
-              this.#cellSize - 2, this.#cellSize - 2
-            );
-            this.#ctx.restore();
-          }
-          // 職人
-          if (r.mason != 0) {
-            this.#ctx.save();
-            //this.#ctx.beginPath();
-            this.#ctx.fillStyle = (r.mason > 0 ? "#0a0" : "#a00");
-            this.#ctx.font = "bold 20pt sans-serif";
-            this.#ctx.textAlign = "center";
-            this.#ctx.textBaseline = "middle";
-            this.#ctx.drawImage(
-              sprite.craftsman,
-              x * this.#cellSize + 1, y * this.#cellSize + 1,
-              this.#cellSize - 2, this.#cellSize - 2
             )
-            this.#ctx.fillText(
-              r.mason,
-              (x + 0.5) * this.#cellSize, (y + 0.5) * this.#cellSize
-            );
-            this.#ctx.restore();
           }
+          else {
+            this.#ctx.drawImage(
+              sprite.wall_green,
+              x * this.#cellSize + 7, y * this.#cellSize + 7,
+              this.#cellSize - 14, this.#cellSize - 14
+            )
+          }
+          this.#ctx.restore();
         }
-      }          
-      //アイコン
-      this.#ctx.save();
-      this.#ctx.globalAlpha = 0.8;
-      
-      for(let d of this.#shown_icons){
-        this.#ctx.drawImage(
-          d.sprite,
-          d.x * this.#cellSize + 1, d.y * this.#cellSize + 1,
-          this.#cellSize - 2, this.#cellSize - 2
-        );
+        // 城
+        if (r.structure == 2) {
+          this.#ctx.save();
+          this.#ctx.drawImage(
+            sprite.castle,
+            x * this.#cellSize + 1, y * this.#cellSize + 1,
+            this.#cellSize - 2, this.#cellSize - 2
+          );
+          this.#ctx.restore();
+        }
+        // 職人
+        if (r.mason != 0) {
+          this.#ctx.save();
+          //this.#ctx.beginPath();
+          this.#ctx.fillStyle = (r.mason > 0 ? "#0a0" : "#a00");
+          this.#ctx.font = "bold 20pt sans-serif";
+          this.#ctx.textAlign = "center";
+          this.#ctx.textBaseline = "middle";
+          this.#ctx.drawImage(
+            sprite.craftsman,
+            x * this.#cellSize + 1, y * this.#cellSize + 1,
+            this.#cellSize - 2, this.#cellSize - 2
+          )
+          this.#ctx.fillText(
+            r.mason,
+            (x + 0.5) * this.#cellSize, (y + 0.5) * this.#cellSize
+          );
+          this.#ctx.restore();
+        }
       }
-      this.#ctx.restore();
+    }          
+    //アイコン
+    this.#ctx.save();
+    this.#ctx.globalAlpha = 0.8;
+    
+    for(let d of this.#shown_icons){
+      this.#ctx.drawImage(
+        d.sprite,
+        d.x * this.#cellSize + 1, d.y * this.#cellSize + 1,
+        this.#cellSize - 2, this.#cellSize - 2
+      );
+    }
+    this.#ctx.restore();
 
-      //カーソル
-      if(this.#clicked != null){
-        let x = this.#clicked.x, y =this.#clicked.y;
-        this.#ctx.drawImage(
-          sprite.cursor,
-          x * this.#cellSize + 1, y * this.#cellSize + 1,
-          this.#cellSize - 2, this.#cellSize - 2
-        );
-      }
-      this.#ctx.restore();
-      this.drawBorders();
+    //カーソル
+    if(this.#clicked != null){
+      let x = this.#clicked.x, y =this.#clicked.y;
+      this.#ctx.drawImage(
+        sprite.cursor,
+        x * this.#cellSize + 1, y * this.#cellSize + 1,
+        this.#cellSize - 2, this.#cellSize - 2
+      );
     }
-  
-    // フィールドの表示初期化
-    clear() {
-      this.#ctx.save();
-      this.#ctx.fillStyle = "#fff";
-      this.#ctx.rect(0, 0, this.#canvas.width, this.#canvas.height);
-      this.#ctx.fill();
-      this.#ctx.restore();
-    }
-  
-    // フィールドの枠線の描画
-    drawBorders() {
-      this.#ctx.save();
-      this.#ctx.strokeStyle = "#000";
-      this.#ctx.lineWidth = 1;
-      for (let i = 0; i <= this.#board.width; i++) {
-        this.#ctx.beginPath();
-        this.#ctx.moveTo(0, this.#cellSize * i);
-        this.#ctx.lineTo(this.#canvas.width, this.#cellSize * i);
-        this.#ctx.stroke();
-        this.#ctx.beginPath();
-        this.#ctx.moveTo(this.#cellSize * i, 0);
-        this.#ctx.lineTo(this.#cellSize * i, this.#canvas.height);
-        this.#ctx.stroke();
-      }
-      this.#ctx.restore();
-    }
-
-    onClick(x, y){
-      this.#clicked = {
-        'x': x,
-        'y': y
-      };
-      this.draw(this.process_field(this.#board));
-    }
-
-    drawIcon(x, y, sprite){
-      this.#shown_icons.push({
-        'x': x,
-        'y': y,
-        'sprite': sprite
-      });
-      this.draw(this.process_field(this.#board));
-    }
-
-    clearIcon(){
-      this.#shown_icons = [];
-    }
+    this.#ctx.restore();
+    this.drawBorders();
   }
+
+  // フィールドの表示初期化
+  clear() {
+    this.#ctx.save();
+    this.#ctx.fillStyle = "#fff";
+    this.#ctx.rect(0, 0, this.#canvas.width, this.#canvas.height);
+    this.#ctx.fill();
+    this.#ctx.restore();
+  }
+
+  // フィールドの枠線の描画
+  drawBorders() {
+    this.#ctx.save();
+    this.#ctx.strokeStyle = "#000";
+    this.#ctx.lineWidth = 1;
+    for (let i = 0; i <= this.#board.width; i++) {
+      this.#ctx.beginPath();
+      this.#ctx.moveTo(0, this.#cellSize * i);
+      this.#ctx.lineTo(this.#canvas.width, this.#cellSize * i);
+      this.#ctx.stroke();
+      this.#ctx.beginPath();
+      this.#ctx.moveTo(this.#cellSize * i, 0);
+      this.#ctx.lineTo(this.#cellSize * i, this.#canvas.height);
+      this.#ctx.stroke();
+    }
+    this.#ctx.restore();
+  }
+
+  onClick(x, y){
+    this.#clicked = {
+      'x': x,
+      'y': y
+    };
+    this.draw(this.process_field(this.#board));
+  }
+
+  drawIcon(x, y, sprite){
+    this.#shown_icons.push({
+      'x': x,
+      'y': y,
+      'sprite': sprite
+    });
+    this.draw(this.process_field(this.#board));
+  }
+
+  clearIcon(){
+    this.#shown_icons = [];
+  }
+}
   
 
 function drawGrid(rows, cols) {
